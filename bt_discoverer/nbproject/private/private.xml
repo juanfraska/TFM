@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
-    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="1">
+        <file>
+            <url>src/bt/Bt_discoverer.java</url>
+            <bookmark id="1">
+                <name/>
+                <line>28</line>
+                <key/>
+            </bookmark>
+        </file>
+    </editor-bookmarks>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/home/parallels/Desktop/TFM_repo/bt_discoverer/src/bt/Hebra_LOS.java</file>
+            <file>file:/home/parallels/Desktop/TFM_repo/bt_discoverer/src/bt/Bt_discoverer.java</file>
+            <file>file:/home/parallels/Desktop/TFM_repo/bt_discoverer/src/bt/Hebra_Datos.java</file>
+        </group>
     </open-files>
 </project-private>
