@@ -59,40 +59,40 @@ public class Bt_discoverer {
             @Override
             public void run() {
                 //Tarea periódica para comprobar el estado de los dispositivos de la bd
-                Connection connection2 = null;
+                Connection connection_timer = null;
 
                 try{
                     //Cogemos el mutex
                     mutex.acquire();
                     try{
-                        connection2 =(Connection) DriverManager.getConnection (url,user,pass);
+                        connection_timer =(Connection) DriverManager.getConnection (url,user,pass);
 
                         // Leemos de la base de datos
-                        Statement s = connection2.createStatement();
+                        Statement s_timer = connection_timer.createStatement();
                         String query_datos = "select * from user";
-                        ResultSet r = s.executeQuery(query_datos);
+                        ResultSet r_timer = s_timer.executeQuery(query_datos);
                         
-                        while (r.next()) {
+                        while (r_timer.next()) {
                         /*
                             Si el dispositivo está en estado NLOS y comprobamos que ha pasado
                             mas de 10 minutos en ese estado, lo eliminamos de la base de datos
                         */
 
-                            if (r.getString(4).equals("NLOS")){
+                            if (r_timer.getString(4).equals("NLOS")){
                                 java.sql.Timestamp time_device;
                                 //TimeStamp actual
                                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                                 //TimeStamp del dispositivo
-                                time_device = r.getTimestamp(6); 
+                                time_device = r_timer.getTimestamp(6); 
                                 //Calculamos la diferencia de minutos
                                 if(dif_minutes(time_device,timestamp) > 5){ //Dispositivo fuera de local
                                     
                                     //System.out.println("Dispositivo "+r.getString(3)+ " fuera de alcance durante mas de x minutos");
                                     //Cambiamos estado
                                     String query_datos2 = "update user set state = ? where (address = ? and state = ?) ";
-                                    PreparedStatement preparedStmt_datos = connection2.prepareStatement(query_datos2);
+                                    PreparedStatement preparedStmt_datos = connection_timer.prepareStatement(query_datos2);
                                     preparedStmt_datos.setString(1, "OUT");
-                                    preparedStmt_datos.setString(2, r.getString(2));
+                                    preparedStmt_datos.setString(2, r_timer.getString(2));
                                     preparedStmt_datos.setString(3, "NLOS");
                                     preparedStmt_datos.executeUpdate();
                                     
@@ -102,7 +102,7 @@ public class Bt_discoverer {
                                     //System.out.println (r.getInt (1) + " " + r.getString (2)+ " " + r.getString(3) + " "+r.getString(4) + " " +r.getTimestamp(5));
                                     
                                 }
-                            }else if(r.getString(4).equals("LOS")){
+                            }else if(r_timer.getString(4).equals("LOS")){
                                 
                                 //System.out.println("Dispositivo en zona de cobertura");
                                 //System.out.println (r.getInt (1) + " " + r.getString (2)+ " " + r.getString(3) + " "+r.getString(4) + " " +r.getTimestamp(5));
@@ -114,8 +114,8 @@ public class Bt_discoverer {
                             System.out.println(e.getMessage());
                     }finally{
                         try{
-                            if(connection2!=null){
-                                connection2.close();
+                            if(connection_timer!=null){
+                                connection_timer.close();
                             }
                         }catch(SQLException ex){
                             System.out.println(ex.getMessage());
@@ -134,10 +134,10 @@ public class Bt_discoverer {
                 
         
         //Conexión para la base de datos
-        Connection connection = null;
+        Connection connection_main = null;
         while(true){ //Bucle infinito de búsqueda
             try{
-                connection =(Connection) DriverManager.getConnection (url,user,pass);
+                connection_main =(Connection) DriverManager.getConnection (url,user,pass);
                     //Objeto con el que esperaremos la búsqueda de dispositivos
                 final Object completedEvent = new Object();
                 devicesDiscovered.clear();
@@ -189,12 +189,12 @@ public class Bt_discoverer {
                    Comprobamos si no se ha escrito ese usuario en la base de datos
                    Para ello realizamos una query en busca de su dirección MAC
                    */
-                   Statement s= connection.createStatement();
+                   Statement s= connection_main.createStatement();
                    String mac_user = btDevice.getBluetoothAddress();
-                   String query = "select * from user HAVING address = ";
+                   String query_main = "select * from user HAVING address = ";
                    mac_user = "'"+mac_user+"'";
-                   query = query.concat(mac_user);
-                   ResultSet r = null;
+                   query_main= query_main.concat(mac_user);
+                   ResultSet r_main = null;
 
                    try{
 
@@ -203,7 +203,7 @@ public class Bt_discoverer {
                             mutex.acquire();
 
                             //Realizamos la query a la bd
-                            r = s.executeQuery(query);
+                            r_main = s.executeQuery(query_main);
                             /*
                                 En el caso de que no nos devuelva nada o el dispositivo
                                 descubierto ya haya salido de la zona durante el tiempo
@@ -211,11 +211,11 @@ public class Bt_discoverer {
                                 dispositivo encontrado en la base de datos
 
                             */
-                            if(!r.next()) {
+                            if(!r_main.next()) {
                                 //Si no está duplicado, escribimos en la base de datos
                                 String query1 = " insert into user (address, name_dev,state, discovered_at)"+ " values (?,?,?,?)";
                                 PreparedStatement preparedStmt;
-                                preparedStmt = connection.prepareStatement(query1);
+                                preparedStmt = connection_main.prepareStatement(query1);
 
                                 //Dirección MAC dispositivo descubierto
                                 preparedStmt.setString (1, btDevice.getBluetoothAddress());
@@ -239,31 +239,44 @@ public class Bt_discoverer {
                                 Comprobamos si está en el estado NLOS para volver
                                 a actualizarlo a LOS ya que lo acabamos de descubrir,
                                 también actualizamos el timestamp  
-
-                            */     while(r.next())
-                                    {
-                                        if(r.getString(4).equals("NLOS")){
-                                            //Cambio NLOS -> LOS
+                                
+                            */  if(r_main.getString(4).equals("NLOS")){
+                                    //Cambio NLOS -> LOS
                                             String query2 = "update user set state = ?, discovered_at= ?, exit_time= ? where (address = ? and state = 'NLOS')";
-                                            PreparedStatement preparedStmt2 = connection.prepareStatement(query2);
+                                            PreparedStatement preparedStmt2 = connection_main.prepareStatement(query2);
                                             preparedStmt2.setString(1, "LOS");
                                             preparedStmt2.setTimestamp(2, (Timestamp) getCurrentTimestamp());
                                             preparedStmt2.setTimestamp(3,null);
-                                            preparedStmt2.setString(4, r.getString(2));
+                                            preparedStmt2.setString(4, r_main.getString(2));
                                             preparedStmt2.executeUpdate();
                                             break;
-                                            
+                                }else{
+                                    while(r_main.next())
+                                        {
+                                            if(r_main.getString(4).equals("NLOS")){
+                                                //Cambio NLOS -> LOS
+                                                String query2 = "update user set state = ?, discovered_at= ?, exit_time= ? where (address = ? and state = 'NLOS')";
+                                                PreparedStatement preparedStmt2 = connection_main.prepareStatement(query2);
+                                                preparedStmt2.setString(1, "LOS");
+                                                preparedStmt2.setTimestamp(2, (Timestamp) getCurrentTimestamp());
+                                                preparedStmt2.setTimestamp(3,null);
+                                                preparedStmt2.setString(4, r_main.getString(2));
+                                                preparedStmt2.executeUpdate();
+                                                break;
+
+                                            }
                                         }
-                                    }
+                                }
                                     /*
                                         Query para comprobar si hay algún dispositivo en estado LOS y NLOS
                                         para no añadir duplicados a la base de datos
                                     */
 
-                                    Statement s2= connection.createStatement();                             
-                                    query = query.concat(" and (state = 'LOS' or state = 'NLOS')");
+                                    Statement s2= connection_main.createStatement();
+                                    String query_main2;
+                                    query_main2 = query_main.concat(" and (state = 'LOS' or state = 'NLOS')");
                                     ResultSet r2 = null;
-                                    r2 = s2.executeQuery(query);
+                                    r2 = s2.executeQuery(query_main2);
                                     /*
                                        Si el dispositivo lo hemos insertado previamente,
                                        no lo volvemos a insertar (duplicado)
@@ -271,7 +284,7 @@ public class Bt_discoverer {
                                     if (!r2.next()){ 
                                         String query3 = " insert into user (address, name_dev,state, discovered_at)"+ " values (?,?,?,?)";
                                          PreparedStatement preparedStmt;
-                                         preparedStmt = connection.prepareStatement(query3);
+                                         preparedStmt = connection_main.prepareStatement(query3);
 
                                          //Dirección MAC dispositivo descubierto
                                          preparedStmt.setString (1, btDevice.getBluetoothAddress());
@@ -314,8 +327,8 @@ public class Bt_discoverer {
             }finally {
                 try {
                     // Cierra la conexion con la base de datos
-                    if(connection!=null){
-                        connection.close();
+                    if(connection_main!=null){
+                        connection_main.close();
                     }
                 } catch (SQLException ex) {
                     System.out.println(ex.getMessage());
